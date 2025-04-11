@@ -7,7 +7,7 @@ const firebaseConfig = {
   authDomain: "plcwebapp.firebaseapp.com",
   databaseURL: "https://plcwebapp-default-rtdb.firebaseio.com/",
   projectId: "plcwebapp",
-  storageBucket: "plcwebapp.firebasestorage.app",
+  storageBucket: "plcwebapp.appspot.com",
   messagingSenderId: "424899404299",
   appId: "1:424899404299:web:640112c4531b145674dd0e"
 };
