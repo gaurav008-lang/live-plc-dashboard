@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { toast } from "@/components/ui/use-toast";
-import { savePLCDataToFirebase } from "@/services/firebase";
+import { savePLCDataToFirebase, isFirebaseConfigured } from "@/services/firebase";
 
 export interface PLCConfiguration {
   id: string;
@@ -183,12 +183,35 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const simulateCloudSync = useCallback((dataPoint: PLCDataPoint) => {
     if (!activePLC?.cloudSync?.enabled) return;
     
+    if (activePLC.cloudSync.provider === 'firebase' && !isFirebaseConfigured()) {
+      setCloudSyncStatus('failed');
+      
+      toast({
+        variant: "destructive",
+        title: "Cloud Sync Failed",
+        description: "Firebase is not properly configured. Please update your credentials.",
+      });
+      
+      setTimeout(() => {
+        setCloudSyncStatus('idle');
+      }, 3000);
+      
+      return;
+    }
+    
     setCloudSyncStatus('syncing');
     
     setTimeout(async () => {
       try {
         if (activePLC) {
-          const success = await savePLCDataToFirebase(activePLC.id, dataPoint);
+          let success = false;
+          
+          if (activePLC.cloudSync.provider === 'firebase') {
+            success = await savePLCDataToFirebase(activePLC.id, dataPoint);
+          } else {
+            success = true;
+            console.log(`Mocking sync to ${activePLC.cloudSync.provider}`);
+          }
           
           if (success) {
             setCloudSyncStatus('synced');
@@ -206,7 +229,7 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toast({
           variant: "destructive",
           title: "Cloud Sync Failed",
-          description: "Unable to upload data to Firebase. Will retry automatically.",
+          description: `Unable to upload data to ${activePLC?.cloudSync?.provider}. Will retry automatically.`,
         });
         
         setTimeout(() => {

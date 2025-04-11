@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePLC } from "@/context/PlcContext";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
-import { Cloud, CloudOff, RefreshCw, Save } from "lucide-react";
-import { savePLCConfiguration } from "@/services/firebase";
+import { Cloud, CloudOff, RefreshCw, Save, AlertTriangle } from "lucide-react";
+import { savePLCConfiguration, isFirebaseConfigured } from "@/services/firebase";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const CloudSyncConfig = () => {
   const { 
@@ -23,6 +24,19 @@ const CloudSyncConfig = () => {
   const [syncInterval, setSyncInterval] = useState("5");
   const [cloudProvider, setCloudProvider] = useState("firebase");
   const [isConfiguring, setIsConfiguring] = useState(false);
+  const [isFirebaseReady, setIsFirebaseReady] = useState(false);
+  
+  useEffect(() => {
+    // Check if Firebase is configured
+    setIsFirebaseReady(isFirebaseConfigured());
+    
+    // Initialize state from active PLC if available
+    if (activePLC?.cloudSync) {
+      setSyncEnabled(activePLC.cloudSync.enabled);
+      setSyncInterval(activePLC.cloudSync.interval.toString());
+      setCloudProvider(activePLC.cloudSync.provider);
+    }
+  }, [activePLC]);
   
   const handleSaveConfig = async () => {
     if (!activePLC) {
@@ -30,6 +44,15 @@ const CloudSyncConfig = () => {
         variant: "destructive",
         title: "No Active PLC",
         description: "Please connect to a PLC first.",
+      });
+      return;
+    }
+    
+    if (cloudProvider === "firebase" && !isFirebaseReady) {
+      toast({
+        variant: "destructive",
+        title: "Firebase Not Configured",
+        description: "Please configure your Firebase credentials in the firebase.ts file.",
       });
       return;
     }
@@ -51,7 +74,8 @@ const CloudSyncConfig = () => {
       updatePLCConfiguration(updatedConfig);
       
       // Save to Firebase
-      const success = await savePLCConfiguration(updatedConfig);
+      const success = cloudProvider === "firebase" && isFirebaseReady ? 
+        await savePLCConfiguration(updatedConfig) : true;
       
       if (success) {
         toast({
@@ -74,6 +98,18 @@ const CloudSyncConfig = () => {
   
   return (
     <div className="space-y-6">
+      {!isFirebaseReady && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Firebase Not Configured</AlertTitle>
+          <AlertDescription>
+            Your Firebase credentials are not properly configured. Please update the credentials in 
+            <code className="mx-1 px-1 py-0.5 bg-muted rounded text-sm">src/services/firebase.ts</code> 
+            file with your own Firebase project details.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -196,13 +232,32 @@ const CloudSyncConfig = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm">
-              Your PLC data is being automatically synchronized with Firebase Realtime Database. You can view your data in the Firebase console.
-            </p>
-            <div className="mt-4 p-3 bg-muted rounded-md text-xs font-mono">
-              <div>Database Path: <span className="text-green-600">plc-data/{activePLC?.id || 'none'}</span></div>
-              <div className="mt-1">Status: <span className="text-blue-600">Connected</span></div>
-            </div>
+            {!isFirebaseReady ? (
+              <div className="space-y-4">
+                <p className="text-sm text-destructive">
+                  Firebase is not properly configured. Please update the credentials in the firebase.ts file.
+                </p>
+                <div className="bg-muted p-4 rounded-md">
+                  <h3 className="text-sm font-medium mb-2">How to Configure Firebase:</h3>
+                  <ol className="list-decimal list-inside space-y-1 text-sm">
+                    <li>Create a Firebase project at <a href="https://console.firebase.google.com/" target="_blank" className="text-blue-500 hover:underline">Firebase Console</a></li>
+                    <li>Add a web app to your project and register it</li>
+                    <li>Enable the Realtime Database in your project</li>
+                    <li>Copy the configuration from Firebase and update the <code className="px-1 py-0.5 bg-muted-foreground/20 rounded">src/services/firebase.ts</code> file</li>
+                  </ol>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm">
+                  Your PLC data is being automatically synchronized with Firebase Realtime Database. You can view your data in the Firebase console.
+                </p>
+                <div className="mt-4 p-3 bg-muted rounded-md text-xs font-mono">
+                  <div>Database Path: <span className="text-green-600">plc-data/{activePLC?.id || 'none'}</span></div>
+                  <div className="mt-1">Status: <span className="text-blue-600">Connected</span></div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
