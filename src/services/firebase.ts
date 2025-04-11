@@ -6,21 +6,22 @@ import { getDatabase, ref, set, onValue, push } from "firebase/database";
 // IMPORTANT: Replace these placeholder values with your own Firebase project credentials
 // Get your credentials from the Firebase console: https://console.firebase.google.com/
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  databaseURL: "YOUR_DATABASE_URL",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyByNDDxXK_plHoZUHVGT6HQQTuMti1rckc",
+  authDomain: "plcwebapp.firebaseapp.com",
+  databaseURL: "https://plcwebapp-default-rtdb.firebaseio.com/",
+  projectId: "plcwebapp",
+  storageBucket: "plcwebapp.firebasestorage.app",
+  messagingSenderId: "424899404299",
+  appId: "1:424899404299:web:640112c4531b145674dd0e"
 };
+
 
 // Check if Firebase credentials have been configured
 const isConfigured = () => {
   return !(
-    firebaseConfig.apiKey === "YOUR_API_KEY" ||
-    firebaseConfig.authDomain === "YOUR_AUTH_DOMAIN" ||
-    firebaseConfig.databaseURL === "YOUR_DATABASE_URL"
+    firebaseConfig.apiKey === "AIzaSyByNDDxXK_plHoZUHVGT6HQQTuMti1rckc" ||
+    firebaseConfig.authDomain === "plcwebapp.firebaseapp.com" ||
+    firebaseConfig.databaseURL === "https://plcwebapp-default-rtdb.firebaseio.com/"
   );
 };
 
