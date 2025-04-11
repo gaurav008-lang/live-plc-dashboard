@@ -2,24 +2,25 @@ import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, onValue, push } from "firebase/database";
 
 // Firebase configuration
+// IMPORTANT: Replace these placeholder values with your own Firebase project credentials
+// Get your credentials from the Firebase console: https://console.firebase.google.com/
 const firebaseConfig = {
   apiKey: "AIzaSyByNDDxXK_plHoZUHVGT6HQQTuMti1rckc",
   authDomain: "plcwebapp.firebaseapp.com",
   databaseURL: "https://plcwebapp-default-rtdb.firebaseio.com/",
   projectId: "plcwebapp",
-  storageBucket: "plcwebapp.appspot.com",
+  storageBucket: "plcwebapp.firebasestorage.app",
   messagingSenderId: "424899404299",
   appId: "1:424899404299:web:640112c4531b145674dd0e"
 };
 
-// Improved check for valid configuration
+
+// Check if Firebase credentials have been configured
 const isConfigured = () => {
-  return (
-    firebaseConfig.apiKey &&
-    firebaseConfig.authDomain &&
-    firebaseConfig.databaseURL &&
-    firebaseConfig.projectId &&
-    firebaseConfig.appId
+  return !(
+    firebaseConfig.apiKey === "AIzaSyByNDDxXK_plHoZUHVGT6HQQTuMti1rckc" ||
+    firebaseConfig.authDomain === "plcwebapp.firebaseapp.com" ||
+    firebaseConfig.databaseURL === "https://plcwebapp-default-rtdb.firebaseio.com/"
   );
 };
 
@@ -45,9 +46,9 @@ export const savePLCDataToFirebase = (plcId: string, dataPoint: any) => {
     console.warn("Firebase is not properly configured. Data not saved.");
     return false;
   }
-
+  
   try {
-    const plcDataRef = ref(database, `plc-data/${plcId}`);
+    const plcDataRef = ref(database, plc-data/${plcId});
     const newDataRef = push(plcDataRef);
     set(newDataRef, {
       ...dataPoint,
@@ -67,15 +68,15 @@ export const subscribeToPLCData = (plcId: string, callback: (data: any[]) => voi
     callback([]);
     return () => {}; // Return empty unsubscribe function
   }
-
-  const plcDataRef = ref(database, `plc-data/${plcId}`);
-
+  
+  const plcDataRef = ref(database, plc-data/${plcId});
+  
   const unsubscribe = onValue(plcDataRef, (snapshot) => {
     const data = snapshot.val();
     const dataArray = data ? Object.values(data) : [];
     callback(dataArray);
   });
-
+  
   return unsubscribe;
 };
 
@@ -85,9 +86,9 @@ export const savePLCConfiguration = (plcConfig: any) => {
     console.warn("Firebase is not properly configured. Configuration not saved.");
     return false;
   }
-
+  
   try {
-    const configRef = ref(database, `plc-configurations/${plcConfig.id}`);
+    const configRef = ref(database, plc-configurations/${plcConfig.id});
     set(configRef, plcConfig);
     return true;
   } catch (error) {
