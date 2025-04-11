@@ -19,7 +19,8 @@ import {
   Cloud, 
   Server, 
   History, 
-  ChevronRight 
+  ChevronRight,
+  LayoutDashboard 
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { usePLC } from "@/context/PlcContext";
@@ -62,6 +63,18 @@ const Layout = ({ children }: LayoutProps) => {
                       <Link to="/" className="flex items-center justify-between">
                         <div className="flex items-center">
                           <Home className="mr-2 h-4 w-4" />
+                          <span>Home</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={location.pathname === "/dashboard"}>
+                      <Link to="/dashboard" className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
                           <span>Dashboard</span>
                         </div>
                         <ChevronRight className="h-4 w-4" />

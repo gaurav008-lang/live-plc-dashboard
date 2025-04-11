@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { savePLCDataToFirebase, isFirebaseConfigured } from "@/services/firebase";
@@ -90,12 +91,22 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [liveData, setLiveData] = useState<PLCDataPoint[]>([]);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'failed'>('idle');
+  const [simulationInterval, setSimulationInterval] = useState<NodeJS.Timeout | null>(null);
   
   const connectToPLC = useCallback(async (config: PLCConfiguration) => {
     setIsConnecting(true);
     
     try {
+      // Simulate a real connection attempt
       await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // In a real application, this would attempt to connect to a real PLC
+      // For now, let's simulate a more realistic connection process with a chance of failure
+      const connectionSuccess = Math.random() > 0.3; // 70% chance of success for demo purposes
+      
+      if (!connectionSuccess) {
+        throw new Error("Connection failed");
+      }
       
       setActivePLC({ ...config, connectedAt: new Date() });
       setIsConnected(true);
@@ -123,14 +134,29 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
   
   const disconnectFromPLC = useCallback(() => {
+    if (simulationInterval) {
+      clearInterval(simulationInterval);
+      setSimulationInterval(null);
+    }
+    
     setIsConnected(false);
     setActivePLC(null);
+    setLiveData([]);
     
     toast({
       title: "Disconnected",
       description: "Successfully disconnected from PLC",
     });
-  }, []);
+  }, [simulationInterval]);
+  
+  // Make sure to clear the interval when component unmounts
+  useEffect(() => {
+    return () => {
+      if (simulationInterval) {
+        clearInterval(simulationInterval);
+      }
+    };
+  }, [simulationInterval]);
   
   const addPLCConfiguration = useCallback((config: PLCConfiguration) => {
     setPlcConfigurations(prev => [...prev, config]);
@@ -155,7 +181,18 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [activePLC]);
   
   const startDataSimulation = useCallback(() => {
+    // Clear any existing interval
+    if (simulationInterval) {
+      clearInterval(simulationInterval);
+    }
+    
+    // Set up a new interval for data simulation
     const intervalId = setInterval(() => {
+      if (!isConnected) {
+        clearInterval(intervalId);
+        return;
+      }
+      
       const now = new Date();
       setLastUpdated(now);
       
@@ -177,8 +214,10 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }, 5000);
     
+    setSimulationInterval(intervalId);
+    
     return () => clearInterval(intervalId);
-  }, [activePLC]);
+  }, [activePLC, isConnected]);
   
   const simulateCloudSync = useCallback((dataPoint: PLCDataPoint) => {
     if (!activePLC?.cloudSync?.enabled) return;

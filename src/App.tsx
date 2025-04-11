@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PLCProvider } from "@/context/PlcContext";
+import Home from "./pages/Home";
 import Index from "./pages/Index";
 import PLCConfigPage from "./pages/PLCConfigPage";
 import CloudSyncPage from "./pages/CloudSyncPage";
@@ -22,7 +23,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/dashboard" element={<Index />} />
             <Route path="/plc-config" element={<PLCConfigPage />} />
             <Route path="/cloud-sync" element={<CloudSyncPage />} />
             <Route path="/history" element={<HistoryPage />} />
