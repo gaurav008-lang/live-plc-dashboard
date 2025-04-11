@@ -35,7 +35,7 @@ const PLCConnectionForm = () => {
   const [formOpen, setFormOpen] = useState(false);
   const [newPLC, setNewPLC] = useState<Partial<PLCConfiguration>>({
     name: "",
-    type: "tcp",
+    type: "tcp" as "tcp" | "rtu",
     ipAddress: "192.168.1.10",
     port: 502,
     serialPort: "COM1",
@@ -195,7 +195,7 @@ const PLCConnectionForm = () => {
                 <Label>Connection Type</Label>
                 <RadioGroup 
                   value={newPLC.type} 
-                  onValueChange={(value) => setNewPLC({ ...newPLC, type: value })}
+                  onValueChange={(value: "tcp" | "rtu") => setNewPLC({ ...newPLC, type: value })}
                   className="flex space-x-4"
                 >
                   <div className="flex items-center space-x-2">
