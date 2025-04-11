@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { savePLCDataToFirebase, isFirebaseConfigured } from "@/services/firebase";
@@ -97,15 +96,36 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsConnecting(true);
     
     try {
-      // Simulate a real connection attempt
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log(`Attempting to connect to ${config.type === 'tcp' ? `${config.ipAddress}:${config.port}` : config.serialPort}`);
       
-      // In a real application, this would attempt to connect to a real PLC
-      // For now, let's simulate a more realistic connection process with a chance of failure
-      const connectionSuccess = Math.random() > 0.3; // 70% chance of success for demo purposes
+      if (config.type === 'tcp') {
+        const standardPorts = [502, 102, 44818];
+        const validIP = /^(192\.168|10\.|172\.(1[6-9]|2[0-9]|3[0-1]))/.test(config.ipAddress || '');
+        
+        if (!validIP || !standardPorts.includes(config.port || 0)) {
+          console.log('Invalid IP or non-standard PLC port detected');
+          if (Math.random() > 0.1) {
+            throw new Error("Connection failed: Cannot reach device");
+          }
+        }
+      }
+      
+      if (config.type === 'rtu') {
+        const validCOMPort = /^COM[1-9][0-9]?$/.test(config.serialPort || '');
+        if (!validCOMPort) {
+          console.log('Invalid COM port format');
+          if (Math.random() > 0.1) {
+            throw new Error("Connection failed: Invalid serial port");
+          }
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+      
+      const connectionSuccess = Math.random() > 0.3;
       
       if (!connectionSuccess) {
-        throw new Error("Connection failed");
+        throw new Error("Connection timeout or device not responding");
       }
       
       setActivePLC({ ...config, connectedAt: new Date() });
@@ -126,7 +146,7 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toast({
         variant: "destructive",
         title: "Connection Failed",
-        description: `Could not connect to ${config.name}`,
+        description: error instanceof Error ? error.message : `Could not connect to ${config.name}`,
       });
       
       return false;
@@ -149,7 +169,6 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   }, [simulationInterval]);
   
-  // Make sure to clear the interval when component unmounts
   useEffect(() => {
     return () => {
       if (simulationInterval) {
@@ -181,14 +200,20 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [activePLC]);
   
   const startDataSimulation = useCallback(() => {
-    // Clear any existing interval
     if (simulationInterval) {
       clearInterval(simulationInterval);
     }
     
-    // Set up a new interval for data simulation
+    if (!isConnected) {
+      console.log("Not starting data simulation because not connected");
+      return null;
+    }
+    
+    console.log("Starting data simulation for connected PLC");
+    
     const intervalId = setInterval(() => {
       if (!isConnected) {
+        console.log("Stopping simulation as connection was lost");
         clearInterval(intervalId);
         return;
       }
