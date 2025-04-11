@@ -58,7 +58,7 @@ const Layout = ({ children }: LayoutProps) => {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild active={location.pathname === "/"}>
+                    <SidebarMenuButton asChild isActive={location.pathname === "/"}>
                       <Link to="/" className="flex items-center justify-between">
                         <div className="flex items-center">
                           <Home className="mr-2 h-4 w-4" />
@@ -70,7 +70,7 @@ const Layout = ({ children }: LayoutProps) => {
                   </SidebarMenuItem>
                   
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild active={location.pathname === "/plc-config"}>
+                    <SidebarMenuButton asChild isActive={location.pathname === "/plc-config"}>
                       <Link to="/plc-config" className="flex items-center justify-between">
                         <div className="flex items-center">
                           <Server className="mr-2 h-4 w-4" />
@@ -82,7 +82,7 @@ const Layout = ({ children }: LayoutProps) => {
                   </SidebarMenuItem>
                   
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild active={location.pathname === "/cloud-sync"}>
+                    <SidebarMenuButton asChild isActive={location.pathname === "/cloud-sync"}>
                       <Link to="/cloud-sync" className="flex items-center justify-between">
                         <div className="flex items-center">
                           <Cloud className="mr-2 h-4 w-4" />
@@ -111,7 +111,7 @@ const Layout = ({ children }: LayoutProps) => {
                   </SidebarMenuItem>
                   
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild active={location.pathname === "/history"}>
+                    <SidebarMenuButton asChild isActive={location.pathname === "/history"}>
                       <Link to="/history" className="flex items-center justify-between">
                         <div className="flex items-center">
                           <History className="mr-2 h-4 w-4" />
@@ -123,7 +123,7 @@ const Layout = ({ children }: LayoutProps) => {
                   </SidebarMenuItem>
                   
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild active={location.pathname === "/settings"}>
+                    <SidebarMenuButton asChild isActive={location.pathname === "/settings"}>
                       <Link to="/settings" className="flex items-center justify-between">
                         <div className="flex items-center">
                           <Settings className="mr-2 h-4 w-4" />

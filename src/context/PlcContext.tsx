@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { toast } from "@/components/ui/use-toast";
+import { savePLCDataToFirebase } from "@/services/firebase";
 
 export interface PLCConfiguration {
   id: string;
@@ -15,6 +16,11 @@ export interface PLCConfiguration {
   registerCount: number;
   description?: string;
   connectedAt?: Date;
+  cloudSync?: {
+    enabled: boolean;
+    interval: number;
+    provider: string;
+  };
 }
 
 export interface PLCDataPoint {
@@ -48,7 +54,12 @@ const defaultPLCConfigs: PLCConfiguration[] = [
     unitId: 1,
     registerAddress: 0x6304,
     registerCount: 1,
-    description: 'Main factory floor PLC monitoring system'
+    description: 'Main factory floor PLC monitoring system',
+    cloudSync: {
+      enabled: true,
+      interval: 5,
+      provider: 'firebase'
+    }
   },
   {
     id: '2',
@@ -60,7 +71,12 @@ const defaultPLCConfigs: PLCConfiguration[] = [
     unitId: 1,
     registerAddress: 0x6304,
     registerCount: 1,
-    description: 'Assembly line control system'
+    description: 'Assembly line control system',
+    cloudSync: {
+      enabled: true,
+      interval: 10,
+      provider: 'firebase'
+    }
   }
 ];
 
@@ -75,15 +91,12 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [liveData, setLiveData] = useState<PLCDataPoint[]>([]);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'failed'>('idle');
   
-  // Simulated connection to PLC
   const connectToPLC = useCallback(async (config: PLCConfiguration) => {
     setIsConnecting(true);
     
     try {
-      // Simulate connection process
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Simulate successful connection
       setActivePLC({ ...config, connectedAt: new Date() });
       setIsConnected(true);
       setIsConnecting(false);
@@ -93,7 +106,6 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         description: `Successfully connected to ${config.name}`,
       });
       
-      // Start data simulation for connected PLC
       startDataSimulation();
       
       return true;
@@ -127,7 +139,6 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removePLCConfiguration = useCallback((id: string) => {
     setPlcConfigurations(prev => prev.filter(config => config.id !== id));
     
-    // If removing the active PLC, disconnect first
     if (activePLC?.id === id) {
       disconnectFromPLC();
     }
@@ -138,20 +149,16 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map(item => item.id === config.id ? config : item)
     );
     
-    // If updating the active PLC, update the active reference
     if (activePLC?.id === config.id) {
       setActivePLC(config);
     }
   }, [activePLC]);
   
-  // Simulate PLC data streaming
   const startDataSimulation = useCallback(() => {
-    // Clear any existing interval
     const intervalId = setInterval(() => {
       const now = new Date();
       setLastUpdated(now);
       
-      // Generate simulated boolean value (coil) based on real example
       const simulatedCoils = [Math.random() > 0.5];
       
       const newDataPoint: PLCDataPoint = {
@@ -161,49 +168,53 @@ export const PLCProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
       
       setLiveData(prev => {
-        // Keep only the last 100 data points to prevent memory issues
         const newData = [...prev, newDataPoint].slice(-100);
         return newData;
       });
       
-      // Simulate cloud sync
-      simulateCloudSync(newDataPoint);
-    }, 5000); // Update every 5 seconds
+      if (activePLC?.cloudSync?.enabled) {
+        simulateCloudSync(newDataPoint);
+      }
+    }, 5000);
     
-    // Clean up on unmount
     return () => clearInterval(intervalId);
-  }, []);
+  }, [activePLC]);
   
-  // Simulate cloud synchronization
   const simulateCloudSync = useCallback((dataPoint: PLCDataPoint) => {
+    if (!activePLC?.cloudSync?.enabled) return;
+    
     setCloudSyncStatus('syncing');
     
-    // Simulate network request
-    setTimeout(() => {
-      // 90% chance of success to simulate occasional network issues
-      if (Math.random() < 0.9) {
-        setCloudSyncStatus('synced');
-        
-        // Reset after a delay
-        setTimeout(() => {
-          setCloudSyncStatus('idle');
-        }, 1000);
-      } else {
+    setTimeout(async () => {
+      try {
+        if (activePLC) {
+          const success = await savePLCDataToFirebase(activePLC.id, dataPoint);
+          
+          if (success) {
+            setCloudSyncStatus('synced');
+            
+            setTimeout(() => {
+              setCloudSyncStatus('idle');
+            }, 1000);
+          } else {
+            throw new Error("Failed to sync");
+          }
+        }
+      } catch (error) {
         setCloudSyncStatus('failed');
         
         toast({
           variant: "destructive",
           title: "Cloud Sync Failed",
-          description: "Unable to upload data to cloud. Will retry automatically.",
+          description: "Unable to upload data to Firebase. Will retry automatically.",
         });
         
-        // Reset after a delay
         setTimeout(() => {
           setCloudSyncStatus('idle');
         }, 3000);
       }
     }, 1000);
-  }, []);
+  }, [activePLC]);
   
   return (
     <PLCContext.Provider

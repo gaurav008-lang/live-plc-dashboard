@@ -1,224 +1,211 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Cloud, CloudOff, RefreshCw } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
 import { usePLC } from "@/context/PlcContext";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
+import { Cloud, CloudOff, RefreshCw, Save } from "lucide-react";
+import { savePLCConfiguration } from "@/services/firebase";
 
 const CloudSyncConfig = () => {
-  const { cloudSyncStatus } = usePLC();
+  const { 
+    activePLC, 
+    cloudSyncStatus, 
+    plcConfigurations,
+    updatePLCConfiguration
+  } = usePLC();
   
-  const [autoSync, setAutoSync] = useState(true);
+  const [syncEnabled, setSyncEnabled] = useState(true);
   const [syncInterval, setSyncInterval] = useState("5");
-  const [apiKey, setApiKey] = useState("");
-  const [cloudProvider, setCloudProvider] = useState("aws");
-  const [isConfigured, setIsConfigured] = useState(false);
+  const [cloudProvider, setCloudProvider] = useState("firebase");
+  const [isConfiguring, setIsConfiguring] = useState(false);
   
-  const handleSaveConfig = () => {
-    if (!apiKey) {
+  const handleSaveConfig = async () => {
+    if (!activePLC) {
       toast({
         variant: "destructive",
-        title: "API Key Required",
-        description: "Please enter a valid API key to configure cloud sync",
+        title: "No Active PLC",
+        description: "Please connect to a PLC first.",
       });
       return;
     }
     
-    // Simulate saving configuration
-    setIsConfigured(true);
+    setIsConfiguring(true);
     
-    toast({
-      title: "Cloud Sync Configured",
-      description: "Your data will now be synchronized with the cloud service",
-    });
-  };
-  
-  const handleTestConnection = () => {
-    toast({
-      title: "Testing Cloud Connection",
-      description: "Please wait while we test the connection...",
-    });
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Update PLC configuration with cloud sync settings
+      const updatedConfig = {
+        ...activePLC,
+        cloudSync: {
+          enabled: syncEnabled,
+          interval: parseInt(syncInterval),
+          provider: cloudProvider,
+        }
+      };
+      
+      // Save to context
+      updatePLCConfiguration(updatedConfig);
+      
+      // Save to Firebase
+      const success = await savePLCConfiguration(updatedConfig);
+      
+      if (success) {
+        toast({
+          title: "Configuration Saved",
+          description: "Cloud synchronization settings have been updated.",
+        });
+      } else {
+        throw new Error("Failed to save configuration");
+      }
+    } catch (error) {
       toast({
-        title: "Connection Successful",
-        description: "Your cloud configuration is working correctly",
+        variant: "destructive",
+        title: "Save Failed",
+        description: "Could not save cloud sync configuration.",
       });
-    }, 2000);
+    } finally {
+      setIsConfiguring(false);
+    }
   };
   
   return (
-    <div className="grid gap-6">
+    <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl flex items-center">
+          <CardTitle className="flex items-center">
             <Cloud className="mr-2 h-5 w-5" />
-            Cloud Sync Configuration
+            Cloud Synchronization Settings
           </CardTitle>
           <CardDescription>
-            Configure how your PLC data is synchronized with the cloud
+            Configure how PLC data is synchronized with cloud services
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="auto-sync">Automatic Synchronization</Label>
-              <Switch
-                id="auto-sync"
-                checked={autoSync}
-                onCheckedChange={setAutoSync}
-              />
+        <CardContent className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="sync-toggle">Enable Cloud Synchronization</Label>
+              <p className="text-sm text-muted-foreground">
+                Automatically upload PLC data to cloud services
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              When enabled, data will be automatically uploaded to the cloud service
-            </p>
-          </div>
-          
-          {autoSync && (
-            <div className="grid gap-2">
-              <Label htmlFor="sync-interval">Sync Interval (seconds)</Label>
-              <Select 
-                value={syncInterval} 
-                onValueChange={setSyncInterval}
-              >
-                <SelectTrigger id="sync-interval">
-                  <SelectValue placeholder="Select interval" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">1 second</SelectItem>
-                  <SelectItem value="5">5 seconds</SelectItem>
-                  <SelectItem value="10">10 seconds</SelectItem>
-                  <SelectItem value="30">30 seconds</SelectItem>
-                  <SelectItem value="60">1 minute</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          
-          <div className="grid gap-2">
-            <Label htmlFor="cloud-provider">Cloud Service Provider</Label>
-            <Select 
-              value={cloudProvider} 
-              onValueChange={setCloudProvider}
-            >
-              <SelectTrigger id="cloud-provider">
-                <SelectValue placeholder="Select provider" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="aws">AWS IoT Core</SelectItem>
-                <SelectItem value="azure">Azure IoT Hub</SelectItem>
-                <SelectItem value="gcp">Google Cloud IoT</SelectItem>
-                <SelectItem value="custom">Custom API Endpoint</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="grid gap-2">
-            <Label htmlFor="api-key">API Key / Connection String</Label>
-            <Input 
-              id="api-key" 
-              type="password" 
-              value={apiKey} 
-              onChange={(e) => setApiKey(e.target.value)} 
-              placeholder="Enter your API key or connection string"
+            <Switch
+              id="sync-toggle"
+              checked={syncEnabled}
+              onCheckedChange={setSyncEnabled}
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              This key will be used to authenticate with the cloud service
-            </p>
           </div>
           
-          {cloudProvider === "custom" && (
-            <div className="grid gap-2">
-              <Label htmlFor="api-endpoint">API Endpoint URL</Label>
-              <Input 
-                id="api-endpoint" 
-                placeholder="https://your-api-endpoint.com/data"
-              />
-            </div>
+          {syncEnabled && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="cloud-provider">Cloud Provider</Label>
+                <Select
+                  value={cloudProvider}
+                  onValueChange={setCloudProvider}
+                >
+                  <SelectTrigger id="cloud-provider">
+                    <SelectValue placeholder="Select a cloud provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="firebase">Firebase Realtime Database</SelectItem>
+                    <SelectItem value="azure">Azure IoT Hub</SelectItem>
+                    <SelectItem value="aws">AWS IoT Core</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="sync-interval">Sync Interval (seconds)</Label>
+                <div className="flex w-full items-center space-x-2">
+                  <Input
+                    id="sync-interval"
+                    type="number"
+                    value={syncInterval}
+                    onChange={(e) => setSyncInterval(e.target.value)}
+                    min="1"
+                    max="3600"
+                  />
+                  <span className="shrink-0">seconds</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  How frequently PLC data is uploaded to the cloud
+                </p>
+              </div>
+              
+              <div className="space-y-2 rounded-lg border p-4 bg-muted/50">
+                <h3 className="font-medium">Current Status</h3>
+                <div className="flex items-center space-x-2">
+                  <div className="flex-1">
+                    {cloudSyncStatus === 'syncing' && (
+                      <div className="flex items-center text-warning">
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                        <span>Syncing to {cloudProvider}...</span>
+                      </div>
+                    )}
+                    {cloudSyncStatus === 'synced' && (
+                      <div className="flex items-center text-success">
+                        <Cloud className="mr-2 h-4 w-4" />
+                        <span>Synchronized with {cloudProvider}</span>
+                      </div>
+                    )}
+                    {cloudSyncStatus === 'failed' && (
+                      <div className="flex items-center text-destructive">
+                        <CloudOff className="mr-2 h-4 w-4" />
+                        <span>Sync failed - will retry automatically</span>
+                      </div>
+                    )}
+                    {cloudSyncStatus === 'idle' && (
+                      <div className="flex items-center text-muted-foreground">
+                        <Cloud className="mr-2 h-4 w-4" />
+                        <span>Waiting for next sync cycle</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <Button 
-            variant="outline" 
-            onClick={handleTestConnection}
-            disabled={!apiKey}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Test Connection
-          </Button>
-          <Button onClick={handleSaveConfig} disabled={!apiKey}>
-            Save Configuration
+        <CardFooter className="flex justify-end">
+          <Button onClick={handleSaveConfig} disabled={isConfiguring}>
+            {isConfiguring ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Save Configuration
+              </>
+            )}
           </Button>
         </CardFooter>
       </Card>
       
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl flex items-center">
-            {isConfigured ? (
-              <Cloud className="mr-2 h-5 w-5 text-success" />
-            ) : (
-              <CloudOff className="mr-2 h-5 w-5 text-muted-foreground" />
-            )}
-            Cloud Sync Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between border-b pb-4">
-              <span className="font-medium">Status</span>
-              <div className="flex items-center">
-                {isConfigured ? (
-                  <>
-                    <span className="h-2 w-2 rounded-full bg-success mr-2"></span>
-                    <span>Configured</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="h-2 w-2 rounded-full bg-muted mr-2"></span>
-                    <span>Not Configured</span>
-                  </>
-                )}
-              </div>
+      {syncEnabled && cloudProvider === "firebase" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Firebase Configuration</CardTitle>
+            <CardDescription>
+              Connect to Firebase Realtime Database
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">
+              Your PLC data is being automatically synchronized with Firebase Realtime Database. You can view your data in the Firebase console.
+            </p>
+            <div className="mt-4 p-3 bg-muted rounded-md text-xs font-mono">
+              <div>Database Path: <span className="text-green-600">plc-data/{activePLC?.id || 'none'}</span></div>
+              <div className="mt-1">Status: <span className="text-blue-600">Connected</span></div>
             </div>
-            
-            <div className="flex items-center justify-between border-b pb-4">
-              <span className="font-medium">Last Sync</span>
-              <span>{cloudSyncStatus === 'synced' ? 'Just now' : 'N/A'}</span>
-            </div>
-            
-            <div className="flex items-center justify-between border-b pb-4">
-              <span className="font-medium">Sync Frequency</span>
-              <span>{autoSync ? `Every ${syncInterval} second(s)` : 'Manual'}</span>
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <span className="font-medium">Service</span>
-              <span>
-                {cloudProvider === 'aws' && 'AWS IoT Core'}
-                {cloudProvider === 'azure' && 'Azure IoT Hub'}
-                {cloudProvider === 'gcp' && 'Google Cloud IoT'}
-                {cloudProvider === 'custom' && 'Custom API Endpoint'}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button 
-            className="w-full" 
-            variant="outline"
-            disabled={!isConfigured}
-          >
-            Sync Now
-          </Button>
-        </CardFooter>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };
